@@ -30,8 +30,14 @@ A movie-review sentiment classifier built in TensorFlow/Keras that classifies a 
 pip install -r requirements.txt
 ```
 
-### 1. Train the model
+### 1. Train the model (optional, pre-trained weights included)
 
+**Windows (PowerShell):**
+```powershell
+python train_model.py
+```
+
+**Linux / macOS:**
 ```bash
 PYTHONUTF8=1 python train_model.py
 ```
@@ -40,13 +46,18 @@ This downloads nothing — it reads `IMDB Dataset.csv` locally, trains the Bidir
 
 ### 2. Run the web app
 
+**Windows (PowerShell):**
+```powershell
+python app.py
+```
+*(Or if using your virtual environment: `.\.venv\Scripts\python app.py`)*
+
+**Linux / macOS:**
 ```bash
-PYTHONUTF8=1 python app.py
+python app.py
 ```
 
-Open **http://127.0.0.1:5000/** and type a review.
-
-> **Note:** `PYTHONUTF8=1` is needed on Windows so the vocabulary (which may contain non-ASCII characters like en-dashes) serializes correctly.
+Open **http://127.0.0.1:5000/** in your browser.
 
 ## Results
 
