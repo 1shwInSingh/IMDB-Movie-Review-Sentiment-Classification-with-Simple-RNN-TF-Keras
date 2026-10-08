@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDB Sentiment Classifier — Bidirectional LSTM</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="badge">TF / Keras · Bidirectional LSTM</span>
+    <h1>IMDB Movie Review<br>Sentiment Classification</h1>
+    <p>Classifies a raw movie review as <strong class="pos">POSITIVE</strong> or <strong class="neg">NEGATIVE</strong> using a Bidirectional LSTM.</p>
+  </div>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="card"><h2>{{ (metrics.test_accuracy * 100) | round(1) }}%</h2><p>Test Accuracy</p></div>
+    <div class="card"><h2>{{ metrics.test_loss }}</h2><p>Test Loss</p></div>
+    <div class="card"><h2>{{ metrics.train_size }}</h2><p>Train Reviews</p></div>
+    <div class="card"><h2>{{ metrics.test_size }}</h2><p>Test Reviews</p></div>
+  </section>
+
+  <section class="predict">
+    <h2>Try the model</h2>
+    <textarea id="review" rows="5" placeholder="Type a movie review... e.g. &quot;The acting was brilliant and the story kept me hooked!&quot;"></textarea>
+    <div class="examples">
+      <button class="ex" data-text="This movie was absolutely wonderful with brilliant acting and a great story">Positive sample</button>
+      <button class="ex" data-text="A boring waste of time with terrible acting and an awful plot">Negative sample</button>
+    </div>
+    <button id="predictBtn">Analyze Sentiment</button>
+    <div id="result" class="result hidden">
+      <div id="resultLabel"></div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div id="resultDetail"></div>
+    </div>
+    <div id="error" class="error hidden"></div>
+  </section>
+
+  <section class="pipeline">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><span>1</span><h3>TextVectorization</h3><p>Raw text → 200 word ids (10k vocab, from train set only)</p></div>
+      <div class="step"><span>2</span><h3>Embedding</h3><p>Each word id → 64-dim vector (mask_zero for padding)</p></div>
+      <div class="step"><span>3</span><h3>Bidirectional LSTM</h3><p>64 LSTM units read the review forward & backward, with dropout + SpatialDropout1D</p></div>
+      <div class="step"><span>4</span><h3>Dense + Sigmoid</h3><p>L2-regularized dense layer → one probability between 0 and 1</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>Built from “IMDB Review Classification With LSTM.ipynb” · 20k review sample · Early stopping restores best weights</footer>
+
+<script>
+const btn = document.getElementById('predictBtn');
+const result = document.getElementById('result');
+const error = document.getElementById('error');
+
+document.querySelectorAll('.ex').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('review').value = b.dataset.text;
+}));
+
+// count-up animation for the stat numbers
+document.querySelectorAll('.card h2').forEach(el => {
+  const raw = el.textContent.replace('%', '').replace(/,/g, '');
+  const target = parseFloat(raw);
+  const isPercent = el.textContent.includes('%');
+  const decimals = (raw.split('.')[1] || '').length;
+  const duration = 1100;
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const val = target * (1 - Math.pow(1 - p, 3));
+    el.textContent = val.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: decimals}) + (isPercent ? '%' : '');
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+});
+
+btn.addEventListener('click', async () => {
+  const review = document.getElementById('review').value.trim();
+  result.classList.add('hidden'); error.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({review})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+    const labelEl = document.getElementById('resultLabel');
+    labelEl.textContent = data.label + ' (' + data.probability.toFixed(3) + ')';
+    labelEl.className = data.label === 'POSITIVE' ? 'pos' : 'neg';
+    const fill = document.getElementById('barFill');
+    fill.style.width = data.confidence + '%';
+    fill.style.background = data.label === 'POSITIVE' ? '#22c55e' : '#ef4444';
+    document.getElementById('resultDetail').textContent =
+      'Confidence: ' + data.confidence + '%';
+    result.classList.remove('hidden');
+  } catch (e) {
+    error.textContent = e.message;
+    error.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Analyze Sentiment';
+  }
+});
+</script>
+</body>
+</html>

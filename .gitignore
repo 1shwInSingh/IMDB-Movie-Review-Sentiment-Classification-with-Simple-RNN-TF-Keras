@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.jupyter/
+
+# Dataset (too large for GitHub)
+IMDB Dataset.csv
+
+# Trained weights (regenerate via train_model.py)
+*.weights.h5
+imdb_sentiment_rnn.keras
+imdb_sentiment_bilstm.keras
+
+# Logs
+app.log
+*.log
