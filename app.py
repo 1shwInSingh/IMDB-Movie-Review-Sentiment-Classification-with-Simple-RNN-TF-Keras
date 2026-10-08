@@ -29,20 +29,57 @@ if os.path.exists(METRICS_PATH):
 
 @app.route("/")
 def index():
-    return render_template("index.html", metrics=metrics)
+    return render_template("index.html", metrics=metrics, metrics_json=json.dumps(metrics))
+
+
+@app.route("/api/metrics")
+def get_metrics():
+    return jsonify(metrics)
 
 
 @app.route("/api/predict", methods=["POST"])
 def predict():
+    import time
+    start_t = time.perf_counter()
     data = request.get_json(force=True)
     review = (data.get("review") or "").strip()
     if not review:
         return jsonify({"error": "Please enter a review."}), 400
     prob = float(model.predict(tf.constant([review]), verbose=0)[0][0])
+    latency_ms = round((time.perf_counter() - start_t) * 1000, 1)
+    
+    label = "POSITIVE" if prob >= 0.5 else "NEGATIVE"
+    confidence = round(max(prob, 1 - prob) * 100, 1)
+
+    if prob >= 0.90:
+        verdict = "Overwhelmingly Positive"
+        emoji = "🤩"
+    elif prob >= 0.70:
+        verdict = "Strongly Positive"
+        emoji = "😊"
+    elif prob >= 0.55:
+        verdict = "Moderately Positive"
+        emoji = "🙂"
+    elif prob >= 0.45:
+        verdict = "Mixed / Neutral"
+        emoji = "😐"
+    elif prob >= 0.30:
+        verdict = "Moderately Negative"
+        emoji = "🙁"
+    elif prob >= 0.10:
+        verdict = "Strongly Negative"
+        emoji = "😠"
+    else:
+        verdict = "Overwhelmingly Negative"
+        emoji = "🤬"
+
     return jsonify({
-        "label": "POSITIVE" if prob >= 0.5 else "NEGATIVE",
+        "label": label,
         "probability": round(prob, 4),
-        "confidence": round(max(prob, 1 - prob) * 100, 1),
+        "confidence": confidence,
+        "verdict": verdict,
+        "emoji": emoji,
+        "latency_ms": latency_ms,
     })
 
 

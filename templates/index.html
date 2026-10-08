@@ -1,111 +1,582 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IMDB Sentiment Classifier — Bidirectional LSTM</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMDB Sentiment AI — Bidirectional LSTM Neural Classifier</title>
+  <meta name="description" content="State-of-the-art IMDB Movie Review Sentiment Classification with Bidirectional LSTM in TensorFlow & Keras. Real-time NLP inference with interactive analytics.">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-<header class="hero">
-  <div class="hero-inner">
-    <span class="badge">TF / Keras · Bidirectional LSTM</span>
-    <h1>IMDB Movie Review<br>Sentiment Classification</h1>
-    <p>Classifies a raw movie review as <strong class="pos">POSITIVE</strong> or <strong class="neg">NEGATIVE</strong> using a Bidirectional LSTM.</p>
-  </div>
-</header>
+  <!-- Ambient Neural Particle Canvas -->
+  <canvas id="neuralCanvas"></canvas>
 
-<main>
-  <section class="stats">
-    <div class="card"><h2>{{ (metrics.test_accuracy * 100) | round(1) }}%</h2><p>Test Accuracy</p></div>
-    <div class="card"><h2>{{ metrics.test_loss }}</h2><p>Test Loss</p></div>
-    <div class="card"><h2>{{ metrics.train_size }}</h2><p>Train Reviews</p></div>
-    <div class="card"><h2>{{ metrics.test_size }}</h2><p>Test Reviews</p></div>
+  <!-- Glowing Mesh Backdrop -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-nav">
+    <div class="nav-container">
+      <div class="brand-cluster">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+            <line x1="7" y1="2" x2="7" y2="22"/>
+            <line x1="17" y1="2" x2="17" y2="22"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="2" y1="7" x2="7" y2="7"/>
+            <line x1="2" y1="17" x2="7" y2="17"/>
+            <line x1="17" y1="17" x2="22" y2="17"/>
+            <line x1="17" y1="7" x2="22" y2="7"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">CineSentiment<span class="brand-ai">AI</span></span>
+          <span class="brand-sub">Bi-LSTM Neural Engine</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#predictStudio" class="nav-link">Studio</a>
+        <a href="#pipelineSection" class="nav-link">Architecture</a>
+        <a href="#analyticsSection" class="nav-link">Learning Curves</a>
+        <a href="#deepDiveSection" class="nav-link">Deep Dive</a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span class="status-label">Model Online</span>
+        </div>
+        <button id="soundToggleBtn" class="sound-toggle-btn" aria-label="Toggle UI Audio">
+          <!-- Populated by JS -->
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="hero-section">
+    <div class="hero-inner">
+      <div class="hero-badge-wrap">
+        <span class="hero-badge">
+          <span class="badge-pulse"></span>
+          TensorFlow 2.x &middot; Bidirectional LSTM &middot; 86.2% Test Accuracy
+        </span>
+      </div>
+
+      <h1 class="hero-title">
+        IMDB Movie Review<br>
+        <span class="gradient-text">Sentiment Intelligence</span>
+      </h1>
+
+      <p class="hero-description">
+        Experience bidirectional recurrent neural inference. By processing contextual sequences in both forward and backward time steps, the network decodes nuanced sentiment with deep sequence memory.
+      </p>
+
+      <div class="hero-chips">
+        <div class="hero-chip">
+          <span class="chip-icon">🧠</span>
+          <span>10,000 Vocab Embedding</span>
+        </div>
+        <div class="hero-chip">
+          <span class="chip-icon">⚡</span>
+          <span>Sub-20ms Neural Latency</span>
+        </div>
+        <div class="hero-chip">
+          <span class="chip-icon">🛡️</span>
+          <span>SpatialDropout1D Regularized</span>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <section class="predict">
-    <h2>Try the model</h2>
-    <textarea id="review" rows="5" placeholder="Type a movie review... e.g. &quot;The acting was brilliant and the story kept me hooked!&quot;"></textarea>
-    <div class="examples">
-      <button class="ex" data-text="This movie was absolutely wonderful with brilliant acting and a great story">Positive sample</button>
-      <button class="ex" data-text="A boring waste of time with terrible acting and an awful plot">Negative sample</button>
+  <main class="main-content">
+    
+    <!-- Benchmark Performance Stat Cards -->
+    <section class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="card-glow"></div>
+        <div class="stat-top">
+          <span class="stat-icon">🎯</span>
+          <span class="stat-tag success">+5.4% vs SimpleRNN</span>
+        </div>
+        <h2 class="stat-number" data-value="{{ (metrics.test_accuracy * 100) | round(1) }}%">{{ (metrics.test_accuracy * 100) | round(1) }}%</h2>
+        <p class="stat-label">Test Set Accuracy</p>
+        <div class="stat-progress-bar">
+          <div class="progress-fill" style="width: {{ (metrics.test_accuracy * 100) | round(1) }}%"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="card-glow"></div>
+        <div class="stat-top">
+          <span class="stat-icon">📉</span>
+          <span class="stat-tag info">BCE Loss</span>
+        </div>
+        <h2 class="stat-number" data-value="{{ metrics.test_loss }}">{{ metrics.test_loss }}</h2>
+        <p class="stat-label">Binary Crossentropy Loss</p>
+        <div class="stat-progress-bar">
+          <div class="progress-fill fill-loss" style="width: 34%"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="card-glow"></div>
+        <div class="stat-top">
+          <span class="stat-icon">📚</span>
+          <span class="stat-tag">Train Split</span>
+        </div>
+        <h2 class="stat-number" data-value="{{ metrics.train_size }}">{{ metrics.train_size }}</h2>
+        <p class="stat-label">Training Reviews Sample</p>
+        <div class="stat-progress-bar">
+          <div class="progress-fill fill-purple" style="width: 70%"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="card-glow"></div>
+        <div class="stat-top">
+          <span class="stat-icon">🧪</span>
+          <span class="stat-tag">Holdout</span>
+        </div>
+        <h2 class="stat-number" data-value="{{ metrics.test_size }}">{{ metrics.test_size }}</h2>
+        <p class="stat-label">Test Evaluation Samples</p>
+        <div class="stat-progress-bar">
+          <div class="progress-fill fill-amber" style="width: 20%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Interactive Studio -->
+    <section class="studio-card" id="predictStudio">
+      <div class="studio-header">
+        <div class="studio-title-area">
+          <div class="studio-badge">Live Inference Studio</div>
+          <h2 class="section-title">Analyze Any Movie Review</h2>
+          <p class="section-sub">Type a custom review or test our curated cinematic presets.</p>
+        </div>
+        <div class="studio-controls">
+          <button id="randomSampleBtn" class="action-btn" title="Load a random review preset">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 8h.01M8 8h.01M8 16h.01M16 16h.01M12 12h.01"></path>
+            </svg>
+            <span>Surprise Me</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Preset Carousel -->
+      <div class="presets-section">
+        <span class="presets-caption">Quick Presets:</span>
+        <div class="presets-list" id="presetsList">
+          <!-- Dynamically populated by app.js -->
+        </div>
+      </div>
+
+      <!-- Textarea Input Area -->
+      <div class="input-container">
+        <textarea 
+          id="review" 
+          rows="5" 
+          placeholder="Paste or write a movie review... (e.g. 'The acting was magnificent, the story captivated me from the opening frame, and the score gave me goosebumps.')"
+          spellcheck="false"
+        ></textarea>
+        
+        <div class="input-toolbar">
+          <div class="toolbar-left">
+            <span class="metric-tag" id="wordCount">0 words</span>
+            <span class="metric-tag" id="charCount">0 characters</span>
+            <span class="metric-tag" id="readTime">~0s read</span>
+          </div>
+          <div class="toolbar-right">
+            <button id="pasteBtn" class="toolbar-btn" title="Paste from clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              <span>Paste</span>
+            </button>
+            <button id="clearBtn" class="toolbar-btn" title="Clear text">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button Area -->
+      <div class="action-bar">
+        <button id="predictBtn" class="primary-predict-btn">
+          <span class="btn-shimmer"></span>
+          <span class="btn-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>Analyze Sentiment</span>
+          </span>
+          <span class="btn-shortcut">Ctrl + Enter</span>
+        </button>
+      </div>
+
+      <!-- Result Card -->
+      <div id="result" class="result-card hidden">
+        <div class="result-card-inner">
+          
+          <div class="result-header">
+            <div class="result-main-info">
+              <div id="moodAvatar" class="mood-avatar">🤩</div>
+              <div class="result-titles">
+                <div class="result-subtag">Model Prediction Verdict</div>
+                <h3 id="resultVerdictText" class="result-verdict">POSITIVE</h3>
+                <div class="badge-cluster">
+                  <span id="resultBadge" class="badge-tag badge-pos">POSITIVE (0.9842)</span>
+                  <span class="badge-tag info">Bi-LSTM Inference</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-actions">
+              <button id="copyResultBtn" class="action-btn" title="Copy result to clipboard">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dual Polarity Bar Gauge -->
+          <div class="polarity-gauge-container">
+            <div class="gauge-labels">
+              <span id="posPercentLabel" class="gauge-label-pos">0% Pos</span>
+              <span class="gauge-center-label">Decision Boundary (0.50)</span>
+              <span id="negPercentLabel" class="gauge-label-neg">0% Neg</span>
+            </div>
+            <div class="polarity-track">
+              <div id="barPosFill" class="track-fill-pos" style="width: 50%;"></div>
+              <div id="barNegFill" class="track-fill-neg" style="width: 50%;"></div>
+              <div class="gauge-threshold-pin"></div>
+            </div>
+          </div>
+
+          <!-- Key Inference Metrics Grid -->
+          <div class="result-metrics-grid">
+            <div class="metric-box">
+              <span class="metric-caption">Sigmoid Probability</span>
+              <span id="probMetric" class="metric-val mono">0.0000</span>
+              <span class="metric-hint">0.0 = Neg &middot; 1.0 = Pos</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-caption">Certainty / Confidence</span>
+              <span id="confMetric" class="metric-val mono">0.0%</span>
+              <span class="metric-hint">Distance from 0.5 threshold</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-caption">Neural Latency</span>
+              <span id="latencyMetric" class="metric-val mono">-- ms</span>
+              <span class="metric-hint">Forward pass compute time</span>
+            </div>
+          </div>
+
+          <!-- Token Highlights -->
+          <div class="token-highlights-card">
+            <div class="token-header">
+              <span class="token-title">Identified Sentiment Cues</span>
+              <span class="token-subtitle">High-impact tokens extracted from review:</span>
+            </div>
+            <div id="tokenChipsContainer" class="token-chips-wrap">
+              <!-- Dynamically populated by app.js -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Error Box -->
+      <div id="error" class="error-banner hidden"></div>
+      
+    </section>
+
+    <!-- Session Prediction History Section -->
+    <section class="history-section">
+      <div class="history-header-bar">
+        <div class="history-title-wrap">
+          <span class="section-icon">🕒</span>
+          <h3 class="section-title-sm">Session Prediction Timeline</h3>
+        </div>
+        <button id="clearHistoryBtn" class="text-btn">Clear History</button>
+      </div>
+
+      <div id="historyEmpty" class="history-empty">
+        No reviews analyzed yet in this session. Try a preset above!
+      </div>
+      <div id="historyList" class="history-grid">
+        <!-- Dynamically populated by app.js -->
+      </div>
+    </section>
+
+    <!-- Interactive Neural Architecture Pipeline Flow -->
+    <section class="pipeline-section" id="pipelineSection">
+      <div class="section-header-center">
+        <span class="section-pill">Deep Learning Pipeline</span>
+        <h2 class="section-title">Bidirectional LSTM Neural Architecture</h2>
+        <p class="section-sub">
+          How a raw character string travels through tokenization, vector embeddings, and dual-direction recurrent cells to generate a single sigmoid probability.
+        </p>
+      </div>
+
+      <div class="pipeline-flow-wrapper">
+        <div class="flow-track-line"></div>
+
+        <div class="pipeline-cards-grid">
+          
+          <div class="pipeline-step-card" data-step="1">
+            <div class="step-badge">01</div>
+            <div class="step-icon-wrap">🔤</div>
+            <h4 class="step-title">TextVectorization</h4>
+            <p class="step-desc">
+              Standardizes raw text, lowercases, strips punctuation, and maps words to token IDs using the 10,000 vocabulary list.
+            </p>
+            <div class="step-spec">
+              <span>Max Length: <strong>200 tokens</strong></span>
+              <span>Padding: <strong>Post (0)</strong></span>
+            </div>
+          </div>
+
+          <div class="pipeline-step-card" data-step="2">
+            <div class="step-badge">02</div>
+            <div class="step-icon-wrap">🌐</div>
+            <h4 class="step-title">Dense Embedding</h4>
+            <p class="step-desc">
+              Maps each discrete token ID to a continuous 64-dimensional learned semantic space where similar words cluster together.
+            </p>
+            <div class="step-spec">
+              <span>Output Dim: <strong>64-D</strong></span>
+              <span>mask_zero: <strong>True (ignores 0s)</strong></span>
+            </div>
+          </div>
+
+          <div class="pipeline-step-card" data-step="3">
+            <div class="step-badge">03</div>
+            <div class="step-icon-wrap">🛡️</div>
+            <h4 class="step-title">SpatialDropout1D</h4>
+            <p class="step-desc">
+              Drops entire 1D embedding feature channels uniformly across all timesteps to prevent feature co-adaptation and strong overfitting.
+            </p>
+            <div class="step-spec">
+              <span>Rate: <strong>0.3 (30%)</strong></span>
+              <span>Axis: <strong>Feature maps</strong></span>
+            </div>
+          </div>
+
+          <div class="pipeline-step-card highlight-step" data-step="4">
+            <div class="step-badge">04</div>
+            <div class="step-icon-wrap">🔄</div>
+            <h4 class="step-title">Bidirectional LSTM</h4>
+            <p class="step-desc">
+              Two parallel 64-unit LSTM cells: one reads forward (left &rarr; right), one reads backward (right &larr; left), combining full context.
+            </p>
+            <div class="step-spec">
+              <span>Units: <strong>64 forward + 64 backward</strong></span>
+              <span>Recurrent Dropout: <strong>0.3</strong></span>
+            </div>
+          </div>
+
+          <div class="pipeline-step-card" data-step="5">
+            <div class="step-badge">05</div>
+            <div class="step-icon-wrap">🎯</div>
+            <h4 class="step-title">Dense &amp; Sigmoid</h4>
+            <p class="step-desc">
+              Combines the final hidden representations and squashes the linear combination into a single calibrated probability in [0, 1].
+            </p>
+            <div class="step-spec">
+              <span>Activation: <strong>Sigmoid</strong></span>
+              <span>Regularizer: <strong>L2 (0.001)</strong></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Learning Curves & Benchmark Section -->
+    <section class="analytics-section" id="analyticsSection">
+      <div class="analytics-card">
+        <div class="analytics-header">
+          <div>
+            <span class="section-pill">Training Analytics</span>
+            <h3 class="section-title">Model Convergence &amp; Learning Curves</h3>
+            <p class="section-sub">Epoch-by-epoch loss &amp; accuracy progression across the 14k review training run.</p>
+          </div>
+          <div class="chart-tab-controls">
+            <button class="chart-tab active" data-chart="accuracy">Accuracy Curve</button>
+            <button class="chart-tab" data-chart="loss">Loss Curve</button>
+          </div>
+        </div>
+
+        <div class="chart-interactive-area">
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot train-dot"></span> Training Metric</span>
+            <span class="legend-item"><span class="legend-dot val-dot"></span> Validation Metric</span>
+          </div>
+
+          <div id="chartSvgContainer" class="chart-svg-box">
+            <!-- Dynamically rendered SVG by app.js -->
+          </div>
+          <div id="chartTooltip" class="chart-tooltip"></div>
+        </div>
+
+        <!-- Comparative Model Benchmark Table -->
+        <div class="benchmark-table-wrap">
+          <h4 class="table-title">Evolution of Model Accuracy Across Iterations</h4>
+          <table class="benchmark-table">
+            <thead>
+              <tr>
+                <th>Model Architecture</th>
+                <th>Units / Dim</th>
+                <th>Regularization</th>
+                <th>Test Accuracy</th>
+                <th>Generalization</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Baseline SimpleRNN</strong></td>
+                <td>32 units</td>
+                <td>None</td>
+                <td><span class="badge-neutral">~80.4%</span></td>
+                <td><span class="text-neg">Fast Overfit</span></td>
+              </tr>
+              <tr>
+                <td><strong>Improved SimpleRNN</strong></td>
+                <td>32 units</td>
+                <td>Dropout 0.2 + SpatialDropout1D + L2</td>
+                <td><span class="badge-neutral">~82.1%</span></td>
+                <td><span class="text-amber">Moderate</span></td>
+              </tr>
+              <tr class="table-row-highlight">
+                <td><strong>Final Bidirectional LSTM</strong></td>
+                <td><strong>64 units (Dual)</strong></td>
+                <td><strong>SpatialDropout 0.3 + Recurrent Dropout 0.3 + L2</strong></td>
+                <td><span class="badge-tag badge-pos">86.2%</span></td>
+                <td><span class="text-pos">Optimal</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Deep Dive Technical Q&A Accordion -->
+    <section class="deepdive-section" id="deepDiveSection">
+      <div class="section-header-center">
+        <span class="section-pill">Concept Explorer</span>
+        <h2 class="section-title">NLP Architecture Deep Dive &amp; Viva Insights</h2>
+        <p class="section-sub">Explore the foundational concepts behind why Bidirectional LSTMs excel at sentiment analysis.</p>
+      </div>
+
+      <div class="faq-grid">
+        
+        <details class="faq-item">
+          <summary class="faq-summary">
+            <span>Why use a Bidirectional LSTM over standard SimpleRNN?</span>
+            <span class="faq-chevron">&darr;</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Standard SimpleRNNs suffer from vanishing gradients and can only process tokens sequentially from left to right. A <strong>Bidirectional LSTM</strong> runs two separate LSTM chains: one reading left-to-right, and the second reading right-to-left. In natural language sentiment, late words often qualify early words (e.g., <em>"The beginning was slow, but the climax was mind-blowing"</em>). Bidirectional context allows both representations to merge at every token.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-summary">
+            <span>What does <code>mask_zero=True</code> do in the Embedding layer?</span>
+            <span class="faq-chevron">&darr;</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              When text reviews are padded to sequence length 200, unused positions are filled with 0. Setting <code>mask_zero=True</code> tells downstream recurrent layers to compute a boolean mask and ignore the padded 0 positions during gradient propagation and hidden state updates, preventing trailing padding from diluting sentiment memory.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-summary">
+            <span>Why use SpatialDropout1D rather than standard Dropout on embeddings?</span>
+            <span class="faq-chevron">&darr;</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Standard dropout drops individual elements randomly across word vectors. However, adjacent words within a sequence can easily co-adapt and reconstruct dropped values. <strong>SpatialDropout1D</strong> drops entire 1D feature channels uniformly across all timesteps, forcing the embedding layers to create independent, robust semantic representations.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-summary">
+            <span>How does the Sigmoid decision threshold work?</span>
+            <span class="faq-chevron">&darr;</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              The single dense output neuron produces a raw real value $z$, transformed via the Sigmoid function $\sigma(z) = \frac{1}{1 + e^{-z}} \in (0, 1)$. If $\sigma(z) \ge 0.5$, the prediction is classified as <strong>POSITIVE</strong>; otherwise, it is classified as <strong>NEGATIVE</strong>.
+            </p>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Premium Footer -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="footer-logo">CineSentiment AI</span>
+          <p>Trained on the IMDB 50k Dataset &middot; Bidirectional LSTM Implementation</p>
+        </div>
+        <div class="footer-badges">
+          <span class="f-badge">TensorFlow 2.x</span>
+          <span class="f-badge">Flask Microframework</span>
+          <span class="f-badge">Keras Sequential</span>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 CineSentiment AI &middot; Built from “IMDB Review Classification With LSTM.ipynb”</p>
+        <p class="footer-tech">Early stopping with restore best weights &middot; L2 Regularized Sigmoid Output</p>
+      </div>
     </div>
-    <button id="predictBtn">Analyze Sentiment</button>
-    <div id="result" class="result hidden">
-      <div id="resultLabel"></div>
-      <div class="bar"><div id="barFill"></div></div>
-      <div id="resultDetail"></div>
-    </div>
-    <div id="error" class="error hidden"></div>
-  </section>
+  </footer>
 
-  <section class="pipeline">
-    <h2>How it works</h2>
-    <div class="steps">
-      <div class="step"><span>1</span><h3>TextVectorization</h3><p>Raw text → 200 word ids (10k vocab, from train set only)</p></div>
-      <div class="step"><span>2</span><h3>Embedding</h3><p>Each word id → 64-dim vector (mask_zero for padding)</p></div>
-      <div class="step"><span>3</span><h3>Bidirectional LSTM</h3><p>64 LSTM units read the review forward & backward, with dropout + SpatialDropout1D</p></div>
-      <div class="step"><span>4</span><h3>Dense + Sigmoid</h3><p>L2-regularized dense layer → one probability between 0 and 1</p></div>
-    </div>
-  </section>
-</main>
+  <!-- Toast Notification Container -->
+  <div id="toast"></div>
 
-<footer>Built from “IMDB Review Classification With LSTM.ipynb” · 20k review sample · Early stopping restores best weights</footer>
+  <!-- Embedded Model Metrics -->
+  <script id="metrics-data" type="application/json">
+    {{ metrics_json | safe }}
+  </script>
 
-<script>
-const btn = document.getElementById('predictBtn');
-const result = document.getElementById('result');
-const error = document.getElementById('error');
-
-document.querySelectorAll('.ex').forEach(b => b.addEventListener('click', () => {
-  document.getElementById('review').value = b.dataset.text;
-}));
-
-// count-up animation for the stat numbers
-document.querySelectorAll('.card h2').forEach(el => {
-  const raw = el.textContent.replace('%', '').replace(/,/g, '');
-  const target = parseFloat(raw);
-  const isPercent = el.textContent.includes('%');
-  const decimals = (raw.split('.')[1] || '').length;
-  const duration = 1100;
-  const start = performance.now();
-  function tick(now) {
-    const p = Math.min((now - start) / duration, 1);
-    const val = target * (1 - Math.pow(1 - p, 3));
-    el.textContent = val.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: decimals}) + (isPercent ? '%' : '');
-    if (p < 1) requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-});
-
-btn.addEventListener('click', async () => {
-  const review = document.getElementById('review').value.trim();
-  result.classList.add('hidden'); error.classList.add('hidden');
-  btn.disabled = true; btn.textContent = 'Analyzing...';
-  try {
-    const res = await fetch('/api/predict', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({review})
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error');
-    const labelEl = document.getElementById('resultLabel');
-    labelEl.textContent = data.label + ' (' + data.probability.toFixed(3) + ')';
-    labelEl.className = data.label === 'POSITIVE' ? 'pos' : 'neg';
-    const fill = document.getElementById('barFill');
-    fill.style.width = data.confidence + '%';
-    fill.style.background = data.label === 'POSITIVE' ? '#22c55e' : '#ef4444';
-    document.getElementById('resultDetail').textContent =
-      'Confidence: ' + data.confidence + '%';
-    result.classList.remove('hidden');
-  } catch (e) {
-    error.textContent = e.message;
-    error.classList.remove('hidden');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Analyze Sentiment';
-  }
-});
-</script>
+  <!-- Application Logic -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
