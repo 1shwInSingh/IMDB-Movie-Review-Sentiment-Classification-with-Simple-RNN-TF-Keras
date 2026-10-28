@@ -15,12 +15,15 @@ A movie-review sentiment classifier built in TensorFlow/Keras that classifies a 
 ```
 ├── IMDB Review Classification With LSTM.ipynb   # the full project notebook
 ├── app.py                                       # Flask web server
+├── test_app.py                                  # automated unit & integration tests
 ├── model_def.py                                 # shared model definition (Bi-LSTM)
 ├── train_model.py                               # trains the final Bi-LSTM and saves artifacts
+├── run.bat                                      # one-click Windows launcher
 ├── metrics.json                                 # test metrics (after training)
 ├── vocab.json                                   # vocabulary used by the web app
 ├── templates/index.html                         # frontend
 ├── static/style.css                             # frontend styling
+├── static/app.js                                # frontend logic & visualizations
 └── PROJECT_NOTES.md                             # key terms + viva Q&A
 ```
 
@@ -59,6 +62,15 @@ python app.py
 ```
 
 Open **http://127.0.0.1:5000/** in your browser.
+
+### 3. Run automated tests
+
+```bash
+python test_app.py
+```
+*(Or in PowerShell: `.\.venv\Scripts\python test_app.py`)*
+
+Verifies all routes (`/`, `/api/health`, `/api/metrics`, `/api/predict`), input validation, and inference accuracy.
 
 ## Results
 
