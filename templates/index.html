@@ -59,6 +59,10 @@
           <span class="status-dot"></span>
           <span class="status-label">Model Online</span>
         </div>
+        <button id="openVivaModalBtn" class="viva-nav-btn" title="Open Presentation & Viva Guide">
+          <span class="viva-btn-icon">🎓</span>
+          <span>Viva &amp; Concepts</span>
+        </button>
         <button id="soundToggleBtn" class="sound-toggle-btn" aria-label="Toggle UI Audio">
           <!-- Populated by JS -->
         </button>
@@ -84,6 +88,17 @@
       <p class="hero-description">
         Experience bidirectional recurrent neural inference. By processing contextual sequences in both forward and backward time steps, the network decodes nuanced sentiment with deep sequence memory.
       </p>
+
+      <div class="hero-actions">
+        <a href="#predictStudio" class="hero-btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>Try Live Inference</span>
+        </a>
+        <button id="heroVivaBtn" class="hero-btn-secondary">
+          <span class="hero-btn-icon">🎓</span>
+          <span>How to Explain This Project</span>
+        </button>
+      </div>
 
       <div class="hero-chips">
         <div class="hero-chip">
@@ -306,6 +321,82 @@
             </div>
           </div>
 
+          <!-- Plain-English Viva Explainer Box -->
+          <div class="explainer-box">
+            <div class="explainer-header">
+              <div class="explainer-badge">
+                <span class="explainer-icon">💡</span>
+                <span class="explainer-title">How to Explain This Prediction (Viva Summary)</span>
+              </div>
+              <button id="copyExplainerBtn" class="action-btn-sm" title="Copy explanation summary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Summary</span>
+              </button>
+            </div>
+            <p id="plainExplanationText" class="explainer-text">
+              The Bi-LSTM model scanned this review across both forward and backward time steps to calculate the sentiment probability.
+            </p>
+          </div>
+
+          <!-- Sentence Token Polarity Heatmap -->
+          <div class="token-heatmap-card">
+            <div class="heatmap-header">
+              <div>
+                <span class="heatmap-title">Interactive Sentence Polarity Map</span>
+                <span class="heatmap-subtitle">Visual token-level breakdown of the review context:</span>
+              </div>
+              <div class="heatmap-legend">
+                <span class="legend-chip-pos">▲ Positive Cue</span>
+                <span class="legend-chip-neg">▼ Negative Cue</span>
+                <span class="legend-chip-context">● Sequence Context</span>
+              </div>
+            </div>
+            <div id="sentenceHeatmap" class="sentence-heatmap-body">
+              <!-- Populated by app.js -->
+            </div>
+          </div>
+
+          <!-- 4-Stage Live Inference Pipeline Stepper -->
+          <div class="inference-stepper-card">
+            <div class="stepper-header">
+              <span class="stepper-title">Live 4-Stage Inference Pathway</span>
+              <span class="stepper-subtitle">Trace how this text transformed into probability through the layers</span>
+            </div>
+            <div class="stepper-stages">
+              <div class="stepper-stage" id="stage1Box">
+                <div class="stage-step-num">01</div>
+                <div class="stage-step-content">
+                  <span class="stage-label">TextVectorization</span>
+                  <span class="stage-sub" id="stageTokensCount">Clean &amp; Pad to 200</span>
+                </div>
+              </div>
+              <div class="stepper-sep">&rarr;</div>
+              <div class="stepper-stage" id="stage2Box">
+                <div class="stage-step-num">02</div>
+                <div class="stage-step-content">
+                  <span class="stage-label">Embedding (64-D)</span>
+                  <span class="stage-sub">mask_zero=True</span>
+                </div>
+              </div>
+              <div class="stepper-sep">&rarr;</div>
+              <div class="stepper-stage highlight" id="stage3Box">
+                <div class="stage-step-num">03</div>
+                <div class="stage-step-content">
+                  <span class="stage-label">Bi-LSTM (Dual Pass)</span>
+                  <span class="stage-sub">Forward &amp; Backward</span>
+                </div>
+              </div>
+              <div class="stepper-sep">&rarr;</div>
+              <div class="stepper-stage" id="stage4Box">
+                <div class="stage-step-num">04</div>
+                <div class="stage-step-content">
+                  <span class="stage-label">Sigmoid Output</span>
+                  <span class="stage-sub" id="stageSigmoidVal">&sigma;(z) &ge; 0.50</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -482,6 +573,31 @@
           </table>
         </div>
 
+        <!-- Interactive Architectural Comparison Widget -->
+        <div class="comparison-card">
+          <div class="comparison-header">
+            <div class="comparison-header-left">
+              <span class="section-pill">Architectural Showdown</span>
+              <h4 class="comparison-title">SimpleRNN vs. Bidirectional LSTM</h4>
+              <p class="comparison-desc">Click below to compare how each architecture handles complex contextual reviews.</p>
+            </div>
+            <div class="comparison-tabs">
+              <button class="comp-tab active" data-model="bilstm" id="compTabBilstm">
+                <span>🔄 Bidirectional LSTM</span>
+                <span class="comp-tag-pos">86.2% Acc</span>
+              </button>
+              <button class="comp-tab" data-model="simplernn" id="compTabSimple">
+                <span>⏮️ SimpleRNN Baseline</span>
+                <span class="comp-tag-neg">80.4% Overfit</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="compModelDisplay" class="comparison-body">
+            <!-- Dynamically populated by app.js -->
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -568,6 +684,247 @@
       </div>
     </div>
   </footer>
+
+  <!-- ========================================================================= -->
+  <!-- VIVA & PRESENTATION MASTER GUIDE MODAL -->
+  <!-- ========================================================================= -->
+  <div id="vivaModal" class="viva-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="vivaModalTitle">
+    <div class="viva-modal-window">
+      
+      <!-- Modal Header -->
+      <div class="viva-modal-header">
+        <div class="viva-modal-header-left">
+          <div class="viva-modal-icon">🎓</div>
+          <div>
+            <h3 id="vivaModalTitle" class="viva-modal-title">Presentation &amp; Viva Examination Master Guide</h3>
+            <p class="viva-modal-subtitle">Everything you need to confidently explain this deep learning project in any interview or academic review</p>
+          </div>
+        </div>
+        <button id="closeVivaModalBtn" class="viva-modal-close" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="viva-modal-tabs">
+        <button class="viva-tab-btn active" data-tab="pitch">🚀 60-Second Pitch</button>
+        <button class="viva-tab-btn" data-tab="qa">❓ Top 8 Viva Questions &amp; Answers</button>
+        <button class="viva-tab-btn" data-tab="blueprint">🧠 Architecture Blueprint</button>
+        <button class="viva-tab-btn" data-tab="overfit">🛡️ Overfitting Defenses</button>
+      </div>
+
+      <!-- Tab Content Panels -->
+      <div class="viva-modal-content">
+        
+        <!-- Panel 1: 60-Second Pitch -->
+        <div id="vivaPanel-pitch" class="viva-panel active">
+          <div class="pitch-card">
+            <div class="pitch-header">
+              <span class="pitch-badge">Perfect Elevator Pitch</span>
+              <button class="copy-pitch-btn" id="copyPitchBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy 60s Script</span>
+              </button>
+            </div>
+            <div class="pitch-script-body" id="pitchScriptText">
+              <p><strong>1. Problem &amp; Scope:</strong> This project is an end-to-end sentiment classification system that classifies raw IMDB movie reviews into POSITIVE or NEGATIVE sentiment using natural language processing in TensorFlow/Keras.</p>
+              <p><strong>2. Dataset:</strong> We used a balanced 20,000-review sample of the IMDB 50k benchmark dataset, split stratifying 70% for training (14,000), 10% for validation (2,000), and 20% for final holdout testing (4,000).</p>
+              <p><strong>3. Model Evolution:</strong> We began with a baseline SimpleRNN (32 units) which reached ~80.4% but quickly overfit and suffered from vanishing gradients on long sentences. We evolved it into an improved SimpleRNN with regularization, and finally into a <strong>Bidirectional LSTM (64 units)</strong>. The bidirectional pass scans reviews in both forward and backward time steps so qualifiers at the end of a sentence correctly influence words at the beginning.</p>
+              <p><strong>4. Regularization &amp; Performance:</strong> By combining 64-dimensional learned embeddings, SpatialDropout1D (0.3), Recurrent Dropout (0.3), L2 weight penalties, and Early Stopping, the Bidirectional LSTM achieved <strong>~85.8% test accuracy</strong> and a clean 0.361 binary cross-entropy loss with sub-20ms inference time.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Top 8 Viva Questions & Answers -->
+        <div id="vivaPanel-qa" class="viva-panel">
+          <div class="viva-qa-list">
+            
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q1</span>
+                <span class="q-text">What problem does this project solve, and what is the pipeline?</span>
+                <button class="copy-qa-btn" data-qa="1">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-1">
+                <strong>Answer:</strong> It solves binary movie review sentiment analysis (Positive vs. Negative). Raw reviews pass through <code>TextVectorization</code> (top 10k words, max 200 tokens) &rarr; 64-D <code>Embedding</code> with <code>mask_zero=True</code> &rarr; <code>SpatialDropout1D(0.3)</code> &rarr; <code>Bidirectional(LSTM(64))</code> &rarr; <code>Dense(1, sigmoid)</code> with L2 regularization to output a calibrated probability.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q2</span>
+                <span class="q-text">Why evolve from SimpleRNN to Bidirectional LSTM?</span>
+                <button class="copy-qa-btn" data-qa="2">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-2">
+                <strong>Answer:</strong> SimpleRNN suffers from the <strong>vanishing gradient problem</strong>, where memory fades rapidly over 20-30 time steps, failing on 200-word reviews. LSTMs solve this with 3 gating mechanisms (Forget, Input, and Output gates) that protect the cell state. Making it <strong>Bidirectional</strong> allows the network to read left-to-right AND right-to-left, so sentiment reversals like <em>"The opening was dull, but the ending was spectacular"</em> are captured with complete context.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q3</span>
+                <span class="q-text">How does raw text become numbers inside the network?</span>
+                <button class="copy-qa-btn" data-qa="3">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-3">
+                <strong>Answer:</strong> The <code>TextVectorization</code> layer standardizes text (lowercases, strips punctuation), tokenizes into words, and maps each word to an integer token ID from our 10,000 learned vocabulary list. The <code>Embedding</code> layer then acts as a lookup table that converts each integer ID into a dense 64-dimensional learned continuous vector capturing semantic meaning.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q4</span>
+                <span class="q-text">Why limit the vocabulary to 10,000 words?</span>
+                <button class="copy-qa-btn" data-qa="4">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-4">
+                <strong>Answer:</strong> Zipf's Law shows that the top 10k words account for over 95% of word occurrences in movie reviews. Including rare, typo-filled tail words would vastly inflate embedding parameters, consume unnecessary memory, and increase the risk of overfitting without aiding generalization. Out-of-vocabulary words cleanly map to the <code>[UNK]</code> token.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q5</span>
+                <span class="q-text">What does <code>mask_zero=True</code> in the Embedding layer do?</span>
+                <button class="copy-qa-btn" data-qa="5">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-5">
+                <strong>Answer:</strong> Reviews shorter than 200 words are padded with trailing zeros. Setting <code>mask_zero=True</code> tells downstream recurrent layers to generate a boolean mask that ignores positions filled with zero during both forward activations and backward gradient calculations, preventing meaningless trailing padding from degrading sentiment memory.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q6</span>
+                <span class="q-text">Why use SpatialDropout1D rather than standard Dropout on embeddings?</span>
+                <button class="copy-qa-btn" data-qa="6">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-6">
+                <strong>Answer:</strong> Standard dropout drops individual elements randomly across word vectors. Because adjacent words often share semantic context, the model can easily reconstruct dropped elements from neighbors. <strong>SpatialDropout1D</strong> drops entire 1D feature channels uniformly across all timesteps, forcing the embedding space to learn truly independent, non-coadapted semantic representations.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q7</span>
+                <span class="q-text">How does the Sigmoid decision boundary work?</span>
+                <button class="copy-qa-btn" data-qa="7">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-7">
+                <strong>Answer:</strong> The single final dense neuron outputs a real scalar $z$, which the sigmoid activation function $\sigma(z) = \frac{1}{1 + e^{-z}}$ squashes into a calibrated range between 0.0 and 1.0. If $\sigma(z) \ge 0.50$, the review is classified as <strong>POSITIVE</strong>; if $< 0.50$, it is classified as <strong>NEGATIVE</strong>. Distance from 0.5 represents certainty/confidence.
+              </div>
+            </div>
+
+            <div class="viva-qa-item">
+              <div class="viva-q-bar">
+                <span class="q-badge">Q8</span>
+                <span class="q-text">What concrete techniques were used to combat overfitting?</span>
+                <button class="copy-qa-btn" data-qa="8">Copy</button>
+              </div>
+              <div class="viva-a-box" id="qaText-8">
+                <strong>Answer:</strong> Five primary defenses: (1) <code>SpatialDropout1D(0.3)</code> on embeddings, (2) <code>recurrent_dropout=0.3</code> between LSTM time steps, (3) <code>L2 kernel regularization (0.001)</code> on weights, (4) restricted 10k vocabulary, and (5) <code>EarlyStopping(patience=4, restore_best_weights=True)</code> which halts training when validation loss stops improving and restores the best snapshot.
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel 3: Architecture Blueprint -->
+        <div id="vivaPanel-blueprint" class="viva-panel">
+          <div class="blueprint-table-card">
+            <table class="blueprint-table">
+              <thead>
+                <tr>
+                  <th>Layer</th>
+                  <th>Type</th>
+                  <th>Output Shape</th>
+                  <th>Config &amp; Hyperparameters</th>
+                  <th>Core Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>input</code></td>
+                  <td>String Tensor</td>
+                  <td><code>(None,)</code></td>
+                  <td>Raw text strings</td>
+                  <td>Accepts unprocessed movie reviews</td>
+                </tr>
+                <tr>
+                  <td><code>text_vectorization</code></td>
+                  <td>TextVectorization</td>
+                  <td><code>(None, 200)</code></td>
+                  <td>max_tokens=10000, output_sequence_length=200</td>
+                  <td>Lowercases, strips punctuation, assigns token IDs</td>
+                </tr>
+                <tr>
+                  <td><code>embedding</code></td>
+                  <td>Embedding</td>
+                  <td><code>(None, 200, 64)</code></td>
+                  <td>input_dim=10000, output_dim=64, mask_zero=True</td>
+                  <td>Projects discrete words into 64-D semantic space</td>
+                </tr>
+                <tr>
+                  <td><code>spatial_dropout1d</code></td>
+                  <td>SpatialDropout1D</td>
+                  <td><code>(None, 200, 64)</code></td>
+                  <td>rate=0.3</td>
+                  <td>Drops entire feature channels across time</td>
+                </tr>
+                <tr>
+                  <td><code>bidirectional_lstm</code></td>
+                  <td>Bidirectional(LSTM)</td>
+                  <td><code>(None, 128)</code></td>
+                  <td>units=64 (x2), dropout=0.3, recurrent_dropout=0.3</td>
+                  <td>Concatenates forward (64) + backward (64) context</td>
+                </tr>
+                <tr>
+                  <td><code>dense_sigmoid</code></td>
+                  <td>Dense</td>
+                  <td><code>(None, 1)</code></td>
+                  <td>units=1, activation='sigmoid', kernel_regularizer=L2(0.001)</td>
+                  <td>Maps representations to probability in [0, 1]</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 4: Overfitting Defenses -->
+        <div id="vivaPanel-overfit" class="viva-panel">
+          <div class="overfit-grid">
+            <div class="overfit-card">
+              <span class="overfit-icon">🛡️</span>
+              <h4 class="overfit-title">1. SpatialDropout1D (0.3)</h4>
+              <p>Unlike standard dropout that zeroes random scalars, SpatialDropout1D drops entire 1D word embedding feature maps uniformly across sequence length. Prevents feature co-adaptation across adjacent tokens.</p>
+            </div>
+            <div class="overfit-card">
+              <span class="overfit-icon">🔄</span>
+              <h4 class="overfit-title">2. Recurrent Dropout (0.3)</h4>
+              <p>Applied to recurrent state transitions $h_{t-1} \to h_t$ within the LSTM memory cell. Stops the recurrent unit from memorizing word-to-word transition paths from the training set.</p>
+            </div>
+            <div class="overfit-card">
+              <span class="overfit-icon">⚖️</span>
+              <h4 class="overfit-title">3. L2 Weight Regularization (0.001)</h4>
+              <p>Adds a penalty proportional to the square of weight magnitudes ($\lambda \sum w_i^2$) directly into the loss function, preventing single dominant weights from driving extreme predictions.</p>
+            </div>
+            <div class="overfit-card">
+              <span class="overfit-icon">⏱️</span>
+              <h4 class="overfit-title">4. EarlyStopping &amp; Restoring Best Weights</h4>
+              <p>Monitors validation loss with patience=4. Training halts when validation error plateaus, and <code>restore_best_weights=True</code> automatically rolls back the network to its generalization peak.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="viva-modal-footer">
+        <span class="viva-footer-tip">💡 Tip: Use keyboard <strong>ESC</strong> to close this guide anytime.</span>
+        <button id="closeVivaFooterBtn" class="viva-close-btn">Close Guide</button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Toast Notification Container -->
   <div id="toast"></div>
