@@ -46,11 +46,12 @@ This downloads nothing — it reads `IMDB Dataset.csv` locally, trains the Bidir
 
 ### 2. Run the web app
 
-**Windows (PowerShell):**
-```powershell
-python app.py
+**Windows (One-click or CMD):**
+Double-click `run.bat` or run:
+```cmd
+run.bat
 ```
-*(Or if using your virtual environment: `.\.venv\Scripts\python app.py`)*
+*(Or manually in PowerShell: `.\.venv\Scripts\python app.py`)*
 
 **Linux / macOS:**
 ```bash
