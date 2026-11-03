@@ -389,6 +389,24 @@
     // Load History
     renderHistory();
 
+    // Auto-test / Preview support via URL parameters (?test=1 or ?review=...)
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const customReview = urlParams.get('review');
+      if (customReview && reviewInput) {
+        reviewInput.value = customReview;
+        updateTextMetrics();
+        setTimeout(runPrediction, 250);
+      } else if (urlParams.has('test') || urlParams.has('sample')) {
+        const firstPreset = PRESET_REVIEWS[0];
+        if (reviewInput && firstPreset) {
+          reviewInput.value = firstPreset.text;
+          updateTextMetrics();
+          setTimeout(runPrediction, 250);
+        }
+      }
+    } catch (e) { }
+
     // Viva & Concept Guide Modal
     initVivaModal();
 
