@@ -74,10 +74,7 @@
   <section class="hero-section">
     <div class="hero-inner">
       <div class="hero-badge-wrap">
-        <span class="hero-badge">
-          <span class="badge-pulse"></span>
-          TensorFlow 2.x &middot; Bidirectional LSTM &middot; 86.2% Test Accuracy
-        </span>
+        <span class="hero-badge"><span class="badge-pulse"></span>TensorFlow 2.x &middot; cuDNN Bi-LSTM &middot; 87.9% Test Accuracy &middot; Underfitting Resolved</span>
       </div>
 
       <h1 class="hero-title">
@@ -103,7 +100,7 @@
       <div class="hero-chips">
         <div class="hero-chip">
           <span class="chip-icon">🧠</span>
-          <span>10,000 Vocab Embedding</span>
+          <span>10k Vocab &middot; 96u Bi-LSTM</span>
         </div>
         <div class="hero-chip">
           <span class="chip-icon">⚡</span>
@@ -125,7 +122,7 @@
         <div class="card-glow"></div>
         <div class="stat-top">
           <span class="stat-icon">🎯</span>
-          <span class="stat-tag success">+5.4% vs SimpleRNN</span>
+          <span class="stat-tag success">+7.5% vs SimpleRNN</span>
         </div>
         <h2 class="stat-number" data-value="{{ (metrics.test_accuracy * 100) | round(1) }}%">{{ (metrics.test_accuracy * 100) | round(1) }}%</h2>
         <p class="stat-label">Test Set Accuracy</p>
@@ -375,22 +372,30 @@
                 <div class="stage-step-num">02</div>
                 <div class="stage-step-content">
                   <span class="stage-label">Embedding (64-D)</span>
-                  <span class="stage-sub">mask_zero=True</span>
+                  <span class="stage-sub">SpatialDrop 0.25</span>
                 </div>
               </div>
               <div class="stepper-sep">&rarr;</div>
               <div class="stepper-stage highlight" id="stage3Box">
                 <div class="stage-step-num">03</div>
                 <div class="stage-step-content">
-                  <span class="stage-label">Bi-LSTM (Dual Pass)</span>
-                  <span class="stage-sub">Forward &amp; Backward</span>
+                  <span class="stage-label">cuDNN Bi-LSTM (96u)</span>
+                  <span class="stage-sub">192-D Full Sequence</span>
                 </div>
               </div>
               <div class="stepper-sep">&rarr;</div>
               <div class="stepper-stage" id="stage4Box">
                 <div class="stage-step-num">04</div>
                 <div class="stage-step-content">
-                  <span class="stage-label">Sigmoid Output</span>
+                  <span class="stage-label">Dual Pool + LayerNorm</span>
+                  <span class="stage-sub">Avg + Max (384-D)</span>
+                </div>
+              </div>
+              <div class="stepper-sep">&rarr;</div>
+              <div class="stepper-stage" id="stage5Box">
+                <div class="stage-step-num">05</div>
+                <div class="stage-step-content">
+                  <span class="stage-label">Dense &amp; Sigmoid</span>
                   <span class="stage-sub" id="stageSigmoidVal">&sigma;(z) &ge; 0.50</span>
                 </div>
               </div>
@@ -443,7 +448,7 @@
             <div class="step-icon-wrap">🔤</div>
             <h4 class="step-title">TextVectorization</h4>
             <p class="step-desc">
-              Standardizes raw text, lowercases, strips punctuation, and maps words to token IDs using the 10,000 vocabulary list.
+              Standardizes raw text, lowercases, strips punctuation, and maps words to token IDs using the top 10,000 vocabulary list.
             </p>
             <div class="step-spec">
               <span>Max Length: <strong>200 tokens</strong></span>
@@ -454,52 +459,65 @@
           <div class="pipeline-step-card" data-step="2">
             <div class="step-badge">02</div>
             <div class="step-icon-wrap">🌐</div>
-            <h4 class="step-title">Dense Embedding</h4>
+            <h4 class="step-title">Embedding &amp; SpatialDrop</h4>
             <p class="step-desc">
-              Maps each discrete token ID to a continuous 64-dimensional learned semantic space where similar words cluster together.
+              Projects tokens into 64-D continuous semantic vectors with L2 (2e-5) regularization and SpatialDropout1D (0.25) to prevent co-adaptation without underfitting.
             </p>
             <div class="step-spec">
               <span>Output Dim: <strong>64-D</strong></span>
-              <span>mask_zero: <strong>True (ignores 0s)</strong></span>
+              <span>SpatialDropout: <strong>0.25 (25%)</strong></span>
             </div>
           </div>
 
-          <div class="pipeline-step-card" data-step="3">
+          <div class="pipeline-step-card highlight-step" data-step="3">
             <div class="step-badge">03</div>
-            <div class="step-icon-wrap">🛡️</div>
-            <h4 class="step-title">SpatialDropout1D</h4>
+            <div class="step-icon-wrap">⚡</div>
+            <h4 class="step-title">cuDNN Bi-LSTM (96 Units)</h4>
             <p class="step-desc">
-              Drops entire 1D embedding feature channels uniformly across all timesteps to prevent feature co-adaptation and strong overfitting.
+              Two parallel 96-unit LSTM cells (forward + backward = 192 total features) returning the full sequence. recurrent_dropout=0.0 preserves native NVIDIA cuDNN GPU speed.
             </p>
             <div class="step-spec">
-              <span>Rate: <strong>0.3 (30%)</strong></span>
-              <span>Axis: <strong>Feature maps</strong></span>
+              <span>Capacity: <strong>96 forward + 96 backward</strong></span>
+              <span>GPU Acceleration: <strong>cuDNN Fast Kernel</strong></span>
             </div>
           </div>
 
-          <div class="pipeline-step-card highlight-step" data-step="4">
+          <div class="pipeline-step-card" data-step="4">
             <div class="step-badge">04</div>
-            <div class="step-icon-wrap">🔄</div>
-            <h4 class="step-title">Bidirectional LSTM</h4>
+            <div class="step-icon-wrap">🌊</div>
+            <h4 class="step-title">Dual Global Pooling</h4>
             <p class="step-desc">
-              Two parallel 64-unit LSTM cells: one reads forward (left &rarr; right), one reads backward (right &larr; left), combining full context.
+              Concatenates GlobalAveragePooling1D (overall thematic sentiment mood) with GlobalMaxPooling1D (sharpest emotional cues) into a rich 384-D representation.
             </p>
             <div class="step-spec">
-              <span>Units: <strong>64 forward + 64 backward</strong></span>
-              <span>Recurrent Dropout: <strong>0.3</strong></span>
+              <span>Pooling: <strong>Avg (192) + Max (192)</strong></span>
+              <span>Concatenated Dim: <strong>384-D</strong></span>
             </div>
           </div>
 
           <div class="pipeline-step-card" data-step="5">
             <div class="step-badge">05</div>
-            <div class="step-icon-wrap">🎯</div>
-            <h4 class="step-title">Dense &amp; Sigmoid</h4>
+            <div class="step-icon-wrap">⚖️</div>
+            <h4 class="step-title">LayerNormalization</h4>
             <p class="step-desc">
-              Combines the final hidden representations and squashes the linear combination into a single calibrated probability in [0, 1].
+              Normalizes the 384-D pooled vectors across feature channels, stabilizing gradient dynamics and ensuring uniform activations across varying review lengths.
             </p>
             <div class="step-spec">
-              <span>Activation: <strong>Sigmoid</strong></span>
-              <span>Regularizer: <strong>L2 (0.001)</strong></span>
+              <span>Epsilon: <strong>1e-3</strong></span>
+              <span>Parameters: <strong>Gamma &amp; Beta scale</strong></span>
+            </div>
+          </div>
+
+          <div class="pipeline-step-card" data-step="6">
+            <div class="step-badge">06</div>
+            <div class="step-icon-wrap">🎯</div>
+            <h4 class="step-title">Dense Projection &amp; Sigmoid</h4>
+            <p class="step-desc">
+              64-unit ReLU dense layer regularized with 0.30 dropout, producing calibrated output probability via the Sigmoid function (threshold 0.50).
+            </p>
+            <div class="step-spec">
+              <span>Head Dim: <strong>64 units (ReLU)</strong></span>
+              <span>Output: <strong>Sigmoid &isin; [0, 1]</strong></span>
             </div>
           </div>
 
@@ -513,16 +531,67 @@
         <div class="analytics-header">
           <div>
             <span class="section-pill">Training Analytics</span>
-            <h3 class="section-title">Model Convergence &amp; Learning Curves</h3>
-            <p class="section-sub">Epoch-by-epoch loss &amp; accuracy progression across the 14k review training run.</p>
+            <h3 class="section-title">Model Convergence &amp; Diagnostic Curves</h3>
+            <p class="section-sub">Diagnostic evaluation verifying balanced training (Train 89.2% &middot; Val 88.1% &middot; Gap 1.18%) with zero underfitting.</p>
           </div>
           <div class="chart-tab-controls">
-            <button class="chart-tab active" data-chart="accuracy">Accuracy Curve</button>
-            <button class="chart-tab" data-chart="loss">Loss Curve</button>
+            <button class="chart-tab active" data-chart="visualizations">🖼️ Publication Graphs</button>
+            <button class="chart-tab" data-chart="accuracy">Accuracy Curve (SVG)</button>
+            <button class="chart-tab" data-chart="loss">Loss Curve (SVG)</button>
           </div>
         </div>
 
-        <div class="chart-interactive-area">
+        <!-- Tab Panel 1: Publication High-Res Charts Showcase -->
+        <div id="visualizationsTabPanel" class="visual-gallery-panel">
+          <div class="gallery-grid">
+            
+            <div class="gallery-card" onclick="openLightbox('{{ url_for('static', filename='loss_comparison.png') }}', 'Loss Curves (Binary Crossentropy) — Baseline vs High-Capacity Bi-LSTM')">
+              <div class="gallery-img-wrap">
+                <img src="{{ url_for('static', filename='loss_comparison.png') }}" alt="Training and Validation Loss Curves" class="gallery-img" loading="lazy">
+                <div class="gallery-overlay">
+                  <span class="zoom-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg> View Full Size</span>
+                </div>
+              </div>
+              <div class="gallery-info">
+                <span class="gallery-badge badge-loss">Loss Dynamics</span>
+                <h4 class="gallery-title">Training vs Validation Loss</h4>
+                <p class="gallery-desc">Clean convergence reaching best epoch at E2 with minimum validation loss (0.324).</p>
+              </div>
+            </div>
+
+            <div class="gallery-card" onclick="openLightbox('{{ url_for('static', filename='accuracy_generalization_gap.png') }}', 'Accuracy Curves & Generalization Gap — Underfitting & Overfitting Diagnostics')">
+              <div class="gallery-img-wrap">
+                <img src="{{ url_for('static', filename='accuracy_generalization_gap.png') }}" alt="Accuracy and Generalization Gap" class="gallery-img" loading="lazy">
+                <div class="gallery-overlay">
+                  <span class="zoom-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg> View Full Size</span>
+                </div>
+              </div>
+              <div class="gallery-info">
+                <span class="gallery-badge badge-gap">Generalization Diagnostic</span>
+                <h4 class="gallery-title">Accuracy &amp; Generalization Gap</h4>
+                <p class="gallery-desc">Tight 1.18% generalization gap safely under the 5% overfit threshold with healthy train accuracy.</p>
+              </div>
+            </div>
+
+            <div class="gallery-card" onclick="openLightbox('{{ url_for('static', filename='confusion_matrix.png') }}', 'Test Set Confusion Matrix & Accuracy Benchmark')">
+              <div class="gallery-img-wrap">
+                <img src="{{ url_for('static', filename='confusion_matrix.png') }}" alt="Confusion Matrix" class="gallery-img" loading="lazy">
+                <div class="gallery-overlay">
+                  <span class="zoom-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg> View Full Size</span>
+                </div>
+              </div>
+              <div class="gallery-info">
+                <span class="gallery-badge badge-acc">Holdout Evaluation</span>
+                <h4 class="gallery-title">Test Confusion Matrix (87.9%)</h4>
+                <p class="gallery-desc">Symmetric performance across 6,600 unseen test reviews, demonstrating balanced true positive/negative rates.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tab Panel 2: Interactive SVG Curve -->
+        <div id="svgTabPanel" class="chart-interactive-area hidden">
           <div class="chart-legend">
             <span class="legend-item"><span class="legend-dot train-dot"></span> Training Metric</span>
             <span class="legend-item"><span class="legend-dot val-dot"></span> Validation Metric</span>
@@ -552,22 +621,29 @@
                 <td><strong>Baseline SimpleRNN</strong></td>
                 <td>32 units</td>
                 <td>None</td>
-                <td><span class="badge-neutral">~80.4%</span></td>
-                <td><span class="text-neg">Fast Overfit</span></td>
+                <td><span class="badge-neutral">80.4%</span></td>
+                <td><span class="text-neg">Severe Overfit (+10.2% gap)</span></td>
               </tr>
               <tr>
-                <td><strong>Improved SimpleRNN</strong></td>
-                <td>32 units</td>
-                <td>Dropout 0.2 + SpatialDropout1D + L2</td>
-                <td><span class="badge-neutral">~82.1%</span></td>
-                <td><span class="text-amber">Moderate</span></td>
+                <td><strong>Baseline Bi-LSTM</strong></td>
+                <td>64 units</td>
+                <td>Standard Dropout 0.3</td>
+                <td><span class="badge-neutral">85.8%</span></td>
+                <td><span class="text-amber">Moderate Overfit (+8.5% gap)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Regularized Bi-LSTM (v1)</strong></td>
+                <td>48 units</td>
+                <td>SpatialDrop 0.4 + HeadDrop 0.45 + L2</td>
+                <td><span class="badge-neutral">87.81%</span></td>
+                <td><span class="text-amber">Underfitting (Val &gt; Train)</span></td>
               </tr>
               <tr class="table-row-highlight">
-                <td><strong>Final Bidirectional LSTM</strong></td>
-                <td><strong>64 units (Dual)</strong></td>
-                <td><strong>SpatialDropout 0.3 + Recurrent Dropout 0.3 + L2</strong></td>
-                <td><span class="badge-tag badge-pos">86.2%</span></td>
-                <td><span class="text-pos">Optimal</span></td>
+                <td><strong>Senior Bi-LSTM v2 (Current)</strong></td>
+                <td><strong>96 units &times; 2 (192 total)</strong></td>
+                <td><strong>Dual Pool + LayerNorm + Spatial 0.25 + cuDNN</strong></td>
+                <td><span class="badge-tag badge-pos">87.86% (~87.9%)</span></td>
+                <td><span class="text-pos">Optimal Balance (+1.18% gap)</span></td>
               </tr>
             </tbody>
           </table>
@@ -625,12 +701,12 @@
 
         <details class="faq-item">
           <summary class="faq-summary">
-            <span>What does <code>mask_zero=True</code> do in the Embedding layer?</span>
+            <span>Why use Dual Global Pooling (Average + Max) instead of taking only the last hidden state?</span>
             <span class="faq-chevron">&darr;</span>
           </summary>
           <div class="faq-body">
             <p>
-              When text reviews are padded to sequence length 200, unused positions are filled with 0. Setting <code>mask_zero=True</code> tells downstream recurrent layers to compute a boolean mask and ignore the padded 0 positions during gradient propagation and hidden state updates, preventing trailing padding from diluting sentiment memory.
+              Standard RNNs evaluate only the final hidden state $h_T$, which can suffer from recency bias or sequence fading. <strong>Dual Global Pooling</strong> extracts two complementary signals across all 200 timesteps: <strong>GlobalAveragePooling1D</strong> computes the prevailing emotional mood throughout the review, while <strong>GlobalMaxPooling1D</strong> isolates sharp emotional spikes (e.g. <em>"breathtaking"</em> or <em>"unwatchable"</em>). Concatenating both into a 384-D vector creates a comprehensive context for classification.
             </p>
           </div>
         </details>
@@ -725,10 +801,10 @@
               </button>
             </div>
             <div class="pitch-script-body" id="pitchScriptText">
-              <p><strong>1. Problem &amp; Scope:</strong> This project is an end-to-end sentiment classification system that classifies raw IMDB movie reviews into POSITIVE or NEGATIVE sentiment using natural language processing in TensorFlow/Keras.</p>
-              <p><strong>2. Dataset:</strong> We used a balanced 20,000-review sample of the IMDB 50k benchmark dataset, split stratifying 70% for training (14,000), 10% for validation (2,000), and 20% for final holdout testing (4,000).</p>
-              <p><strong>3. Model Evolution:</strong> We began with a baseline SimpleRNN (32 units) which reached ~80.4% but quickly overfit and suffered from vanishing gradients on long sentences. We evolved it into an improved SimpleRNN with regularization, and finally into a <strong>Bidirectional LSTM (64 units)</strong>. The bidirectional pass scans reviews in both forward and backward time steps so qualifiers at the end of a sentence correctly influence words at the beginning.</p>
-              <p><strong>4. Regularization &amp; Performance:</strong> By combining 64-dimensional learned embeddings, SpatialDropout1D (0.3), Recurrent Dropout (0.3), L2 weight penalties, and Early Stopping, the Bidirectional LSTM achieved <strong>~85.8% test accuracy</strong> and a clean 0.361 binary cross-entropy loss with sub-20ms inference time.</p>
+              <p><strong>1. Problem &amp; Scope:</strong> An end-to-end sentiment classification studio classifying unstructured IMDB movie reviews into calibrated positive/negative probabilities using TensorFlow/Keras with a lightweight serverless NumPy inference engine.</p>
+              <p><strong>2. Dataset &amp; Splits:</strong> Balanced 44,000-review subset of the IMDB 50k dataset, stratified into 32,912 training samples, 4,488 validation samples, and 6,600 holdout test reviews.</p>
+              <p><strong>3. Architectural Evolution &amp; Underfitting Resolution:</strong> We evolved from SimpleRNN (80.4%, vanishing gradients) to Bi-LSTM. When heavy regularization caused underfitting (train accuracy suppressed below validation), we doubled capacity to <strong>96 units per direction (192 features)</strong>, introduced <strong>Dual Global Pooling (Average + Max)</strong>, and stabilized activations with <strong>LayerNormalization</strong>.</p>
+              <p><strong>4. GPU cuDNN Acceleration &amp; Final Performance:</strong> Keeping <code>recurrent_dropout=0.0</code> enabled full native NVIDIA cuDNN acceleration. The final model achieves <strong>87.86% (~87.9%) test accuracy</strong> with a textbook <strong>1.18% generalization gap</strong> (Train 89.24% vs Val 88.06%), completely eliminating both overfitting and underfitting.</p>
             </div>
           </div>
         </div>
@@ -843,46 +919,74 @@
               </thead>
               <tbody>
                 <tr>
-                  <td><code>input</code></td>
-                  <td>String Tensor</td>
-                  <td><code>(None,)</code></td>
-                  <td>Raw text strings</td>
-                  <td>Accepts unprocessed movie reviews</td>
+                  <td><code>review_text</code></td>
+                  <td>InputLayer</td>
+                  <td><code>(None, 1)</code></td>
+                  <td>dtype=tf.string</td>
+                  <td>Accepts raw unprocessed movie review string</td>
                 </tr>
                 <tr>
                   <td><code>text_vectorization</code></td>
                   <td>TextVectorization</td>
                   <td><code>(None, 200)</code></td>
-                  <td>max_tokens=10000, output_sequence_length=200</td>
-                  <td>Lowercases, strips punctuation, assigns token IDs</td>
+                  <td>max_tokens=10000, output_seq=200</td>
+                  <td>Lowercases, cleans, tokenizes, maps to 10k vocab</td>
                 </tr>
                 <tr>
                   <td><code>embedding</code></td>
                   <td>Embedding</td>
                   <td><code>(None, 200, 64)</code></td>
-                  <td>input_dim=10000, output_dim=64, mask_zero=True</td>
-                  <td>Projects discrete words into 64-D semantic space</td>
+                  <td>input_dim=10000, output_dim=64, L2(2e-5)</td>
+                  <td>Maps discrete IDs into 64-D continuous semantic vectors</td>
                 </tr>
                 <tr>
-                  <td><code>spatial_dropout1d</code></td>
+                  <td><code>spatial_dropout</code></td>
                   <td>SpatialDropout1D</td>
                   <td><code>(None, 200, 64)</code></td>
-                  <td>rate=0.3</td>
-                  <td>Drops entire feature channels across time</td>
+                  <td>rate=0.25</td>
+                  <td>Drops 1D embedding channels uniformly to prevent co-adaptation</td>
                 </tr>
                 <tr>
-                  <td><code>bidirectional_lstm</code></td>
+                  <td><code>bilstm</code></td>
                   <td>Bidirectional(LSTM)</td>
-                  <td><code>(None, 128)</code></td>
-                  <td>units=64 (x2), dropout=0.3, recurrent_dropout=0.3</td>
-                  <td>Concatenates forward (64) + backward (64) context</td>
+                  <td><code>(None, 200, 192)</code></td>
+                  <td>units=96 (x2), return_seq=True, cuDNN GPU</td>
+                  <td>96 forward + 96 backward cells capturing bidirectional syntax</td>
                 </tr>
                 <tr>
-                  <td><code>dense_sigmoid</code></td>
+                  <td><code>pooling_concat</code></td>
+                  <td>Concatenate(Avg, Max)</td>
+                  <td><code>(None, 384)</code></td>
+                  <td>GlobalAverage (192) + GlobalMax (192)</td>
+                  <td>Dual pooling captures both overall tone and peak emotion</td>
+                </tr>
+                <tr>
+                  <td><code>layer_norm</code></td>
+                  <td>LayerNormalization</td>
+                  <td><code>(None, 384)</code></td>
+                  <td>epsilon=1e-3, Gamma &amp; Beta</td>
+                  <td>Standardizes activations across features for gradient stability</td>
+                </tr>
+                <tr>
+                  <td><code>dense_proj</code></td>
+                  <td>Dense</td>
+                  <td><code>(None, 64)</code></td>
+                  <td>units=64, activation='relu', L2(5e-5)</td>
+                  <td>High-capacity classification projection head</td>
+                </tr>
+                <tr>
+                  <td><code>head_dropout</code></td>
+                  <td>Dropout</td>
+                  <td><code>(None, 64)</code></td>
+                  <td>rate=0.30</td>
+                  <td>Calibrated regularization guarding against overconfidence</td>
+                </tr>
+                <tr>
+                  <td><code>sentiment_prob</code></td>
                   <td>Dense</td>
                   <td><code>(None, 1)</code></td>
-                  <td>units=1, activation='sigmoid', kernel_regularizer=L2(0.001)</td>
-                  <td>Maps representations to probability in [0, 1]</td>
+                  <td>units=1, activation='sigmoid'</td>
+                  <td>Outputs calibrated sentiment probability &isin; [0, 1]</td>
                 </tr>
               </tbody>
             </table>
@@ -936,5 +1040,19 @@
 
   <!-- Application Logic -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+  <!-- Fullscreen Chart Lightbox Modal -->
+  <div id="chartLightboxModal" class="chart-lightbox-modal hidden" onclick="closeLightbox(event)">
+    <div class="lightbox-content-box">
+      <div class="lightbox-header">
+        <h3 id="lightboxTitle" class="lightbox-title">Visualization</h3>
+        <button class="lightbox-close-btn" onclick="closeLightbox()">&times;</button>
+      </div>
+      <div class="lightbox-img-wrap">
+        <img id="lightboxImg" src="" alt="Fullscreen Chart" class="lightbox-img">
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

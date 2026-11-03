@@ -804,7 +804,7 @@
                 <span class="comp-box-icon">🔄</span>
                 <div>
                   <h5 class="comp-box-title">Bidirectional Sequence Processing</h5>
-                  <span class="badge-tag badge-pos">64 Forward + 64 Backward Units</span>
+                  <span class="badge-tag badge-pos">96 Forward + 96 Backward Units (192-D)</span>
                 </div>
               </div>
               <p class="comp-box-text">Reads the review in both chronological (left &rarr; right) and reverse (right &larr; left) time directions. Early tokens are informed by late context, correctly decoding sentiment reversals like <em>"was slow at first, but the ending made it a masterpiece"</em>.</p>
@@ -821,10 +821,10 @@
                   <span class="badge-tag info">Generalization Champion</span>
                 </div>
               </div>
-              <p class="comp-box-text">Armed with SpatialDropout1D (0.3) on embeddings, Recurrent Dropout (0.3) on hidden state transitions, and L2 weight decay. Prevents unit co-adaptation.</p>
+              <p class="comp-box-text">Armed with SpatialDropout1D (0.25), cuDNN GPU kernel acceleration (recurrent_dropout=0.0), Dual Global Pooling (Avg + Max = 384-D), and LayerNormalization. Prevents unit co-adaptation.</p>
               <ul class="comp-features-list">
-                <li>🎯 <strong>Final Test Accuracy:</strong> 86.2% on 4,000 holdout reviews.</li>
-                <li>📉 <strong>Binary Cross-Entropy Loss:</strong> 0.352 with stable validation convergence.</li>
+                <li>🎯 <strong>Final Test Accuracy:</strong> 87.86% (~87.9%) on 6,600 holdout reviews.</li>
+                <li>📉 <strong>Binary Cross-Entropy Loss:</strong> 0.335 with 1.18% generalization gap (zero underfitting).</li>
               </ul>
             </div>
           </div>
@@ -1025,19 +1025,29 @@
     if (!metricsData || !metricsData.history) return;
 
     const chartTabs = document.querySelectorAll('.chart-tab');
-    let currentTab = 'accuracy';
+    const visPanel = document.getElementById('visualizationsTabPanel');
+    const svgPanel = document.getElementById('svgTabPanel');
 
     chartTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         sfx.playClick();
         chartTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        currentTab = tab.dataset.chart;
-        renderTrainingChart(metricsData.history, currentTab);
+        const chartType = tab.dataset.chart;
+        if (chartType === 'visualizations') {
+          if (visPanel) visPanel.classList.remove('hidden');
+          if (svgPanel) svgPanel.classList.add('hidden');
+        } else {
+          if (visPanel) visPanel.classList.add('hidden');
+          if (svgPanel) svgPanel.classList.remove('hidden');
+          renderTrainingChart(metricsData.history, chartType);
+        }
       });
     });
 
-    renderTrainingChart(metricsData.history, 'accuracy');
+    // Default to publication visualizations tab
+    if (visPanel) visPanel.classList.remove('hidden');
+    if (svgPanel) svgPanel.classList.add('hidden');
   }
 
   function renderTrainingChart(history, metricType) {
@@ -1192,5 +1202,39 @@
   function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+
+
+  // ==========================================
+  // 11. PUBLICATION CHART FULLSCREEN LIGHTBOX
+  // ==========================================
+  window.openLightbox = function (src, title) {
+    const modal = document.getElementById('chartLightboxModal');
+    const img = document.getElementById('lightboxImg');
+    const titleEl = document.getElementById('lightboxTitle');
+    if (!modal || !img) return;
+    img.src = src;
+    if (titleEl) titleEl.textContent = title || 'Training Diagnostic Visualization';
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    sfx.playClick();
+  };
+
+  window.closeLightbox = function (e) {
+    if (e && e.target && e.target.closest && e.target.closest('.lightbox-content-box') && !e.target.closest('.lightbox-close-btn')) {
+      return;
+    }
+    const modal = document.getElementById('chartLightboxModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      sfx.playClick();
+    }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      window.closeLightbox();
+    }
+  });
 
 })();
