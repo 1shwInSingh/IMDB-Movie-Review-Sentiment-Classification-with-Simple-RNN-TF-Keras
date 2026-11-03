@@ -1,7 +1,6 @@
 """Train the Bidirectional LSTM IMDB sentiment model (mirrors the notebook).
 
-Saves weights + vocabulary JSON instead of a full .keras model, because the
-TextVectorization layer cannot be serialized/reloaded reliably (Keras 3).
+Saves weights + vocabulary JSON + compact NumPy weights for Vercel/serverless.
 """
 import json
 import numpy as np
@@ -60,7 +59,26 @@ test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
 print("Test loss:", round(test_loss, 3))
 print("Test accuracy:", round(test_accuracy, 3))
 
+# 1. Save standard Keras weights
 model.save_weights("imdb_sentiment_bilstm.weights.h5")
+
+# 2. Save compact weights for serverless deployment (Vercel) - ~2.5 MB vs 2.2 GB TF
+embed_layer = model.layers[1]
+bilstm_layer = model.layers[3]
+dense_layer = model.layers[4]
+
+np.savez_compressed(
+    "model_weights.npz",
+    W_embed=embed_layer.get_weights()[0],
+    W_f=bilstm_layer.forward_layer.cell.get_weights()[0],
+    U_f=bilstm_layer.forward_layer.cell.get_weights()[1],
+    b_f=bilstm_layer.forward_layer.cell.get_weights()[2],
+    W_b=bilstm_layer.backward_layer.cell.get_weights()[0],
+    U_b=bilstm_layer.backward_layer.cell.get_weights()[1],
+    b_b=bilstm_layer.backward_layer.cell.get_weights()[2],
+    W_d=dense_layer.get_weights()[0],
+    b_d=dense_layer.get_weights()[1],
+)
 
 with open("vocab.json", "w", encoding="utf-8") as f:
     json.dump(clean_vocab, f, ensure_ascii=False)
@@ -72,4 +90,4 @@ with open("metrics.json", "w") as f:
         "history": {k: [round(float(v), 4) for v in vals] for k, vals in history.history.items()},
         "train_size": int(len(X_train)), "val_size": int(len(X_val)), "test_size": int(len(X_test)),
     }, f, indent=2)
-print("Saved imdb_sentiment_bilstm.weights.h5, vocab.json and metrics.json")
+print("Saved imdb_sentiment_bilstm.weights.h5, model_weights.npz, vocab.json and metrics.json")

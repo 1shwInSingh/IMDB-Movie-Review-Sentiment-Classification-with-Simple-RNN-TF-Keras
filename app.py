@@ -3,33 +3,29 @@ import json
 import os
 import time
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-import tensorflow as tf
 from flask import Flask, jsonify, render_template, request
 
-from model_def import build_model
+from model_engine import load_model
 
 app = Flask(__name__)
 
 # Robust absolute path resolution
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-WEIGHTS_PATH = os.path.join(BASE_DIR, "imdb_sentiment_bilstm.weights.h5")
 VOCAB_PATH = os.path.join(BASE_DIR, "vocab.json")
 METRICS_PATH = os.path.join(BASE_DIR, "metrics.json")
 
-# Load vocabulary and build Bi-LSTM model
+# Load vocabulary and model (loads fast lightweight NumPy weights if available, or TF fallback)
 with open(VOCAB_PATH, encoding="utf-8") as f:
     vocab_list = json.load(f)
 
-model = build_model(vocab_list)
-model.load_weights(WEIGHTS_PATH)
+model = load_model(BASE_DIR, vocab_list)
 
-# Warm up TensorFlow computation graph so initial user request has zero cold-start delay
-try:
-    _ = model.predict(tf.constant(["warmup query for graph compilation"]), verbose=0)
-except Exception:
-    pass
+# Warm up model so initial user request has zero cold-start delay
+if model is not None:
+    try:
+        _ = model.predict("warmup query for initialization")
+    except Exception:
+        pass
 
 # Load evaluation metrics
 metrics = {}
@@ -57,7 +53,7 @@ def health():
         "status": "healthy",
         "model": "Bidirectional LSTM",
         "vocab_size": len(vocab_list),
-        "weights_loaded": os.path.exists(WEIGHTS_PATH)
+        "weights_loaded": model is not None and model.is_loaded()
     })
 
 
@@ -81,7 +77,7 @@ def predict():
     if len(review) > 10000:
         review = review[:10000]
 
-    prob = float(model.predict(tf.constant([review]), verbose=0)[0][0])
+    prob = float(model.predict(review))
     latency_ms = round((time.perf_counter() - start_t) * 1000, 1)
 
     label = "POSITIVE" if prob >= 0.5 else "NEGATIVE"
@@ -121,4 +117,3 @@ def predict():
 
 if __name__ == "__main__":
     app.run(debug=False, host="127.0.0.1", port=5000)
-

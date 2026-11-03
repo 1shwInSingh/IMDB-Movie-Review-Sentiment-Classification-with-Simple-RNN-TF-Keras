@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .jupyter/
+.venv/
 
 # Dataset (too large for GitHub)
 IMDB Dataset.csv

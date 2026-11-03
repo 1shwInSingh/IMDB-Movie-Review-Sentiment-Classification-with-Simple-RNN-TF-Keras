@@ -1,0 +1,7 @@
+# Development & Training dependencies (Jupyter Notebook, training scripts, full TensorFlow)
+-r requirements.txt
+tensorflow>=2.13
+scikit-learn
+pandas
+matplotlib
+kagglehub
