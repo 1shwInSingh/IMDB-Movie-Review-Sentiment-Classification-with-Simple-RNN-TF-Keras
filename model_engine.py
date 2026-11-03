@@ -1,8 +1,8 @@
 """Lightweight NumPy inference engine for IMDB Sentiment Classifier.
 
-Eliminates the heavy TensorFlow dependency in production/serverless (e.g. Vercel),
-reducing deployment bundle size from >2.2 GB down to <30 MB while preserving
-exact 1-to-1 numerical precision and reducing inference latency to ~2ms.
+Executes the Senior Regularized Bi-LSTM model with Dual Global Pooling
+(Average + Max Pooling) and Layer Normalization in pure NumPy.
+Runs in ~3ms without requiring TensorFlow in production (Vercel serverless friendly).
 """
 import os
 import re
@@ -19,22 +19,16 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-np.clip(x, -30.0, 30.0)))
 
 
-def _run_lstm(x_seq, W, U, b, mask):
-    """Standard Keras-compatible LSTM forward pass.
-
-    Gate ordering in Keras:
-      i = input gate (z0)
-      f = forget gate (z1)
-      c = candidate cell state (z2)
-      o = output gate (z3)
-    """
+def _run_lstm_seq(x_seq, W, U, b):
+    """Keras-compatible LSTM returning the full sequence of hidden states."""
+    T = len(x_seq)
     units = U.shape[0]
     h = np.zeros(units, dtype=np.float32)
     c = np.zeros(units, dtype=np.float32)
+    h_seq = np.zeros((T, units), dtype=np.float32)
 
-    for xt, m in zip(x_seq, mask):
-        if not m:
-            continue
+    for t in range(T):
+        xt = x_seq[t]
         z = np.dot(xt, W) + np.dot(h, U) + b
         zi, zf, zc, zo = np.split(z, 4)
         i = sigmoid(zi)
@@ -43,12 +37,13 @@ def _run_lstm(x_seq, W, U, b, mask):
         o = sigmoid(zo)
         c = f * c + i * c_cand
         h = o * np.tanh(c)
+        h_seq[t] = h
 
-    return h
+    return h_seq
 
 
 class NumpySentimentModel:
-    """NumPy-powered Bidirectional LSTM inference engine."""
+    """NumPy-powered Regularized Bidirectional LSTM with Dual Pooling."""
 
     def __init__(self, npz_path, vocab_list):
         self.vocab = vocab_list
@@ -62,8 +57,12 @@ class NumpySentimentModel:
         self.W_b = weights["W_b"]
         self.U_b = weights["U_b"]
         self.b_b = weights["b_b"]
-        self.W_d = weights["W_d"]
-        self.b_d = weights["b_d"]
+        self.ln_gamma = weights["ln_gamma"]
+        self.ln_beta = weights["ln_beta"]
+        self.W_dense1 = weights["W_dense1"]
+        self.b_dense1 = weights["b_dense1"]
+        self.W_out = weights["W_out"]
+        self.b_out = weights["b_out"]
         self._loaded = True
 
     def is_loaded(self):
@@ -78,21 +77,38 @@ class NumpySentimentModel:
         if not toks:
             return 0.5
 
+        if len(toks) < MAX_LEN:
+            toks = toks + [0] * (MAX_LEN - len(toks))
+
         toks_arr = np.array(toks, dtype=np.int32)
-        mask = toks_arr > 0
         x_seq = self.W_embed[toks_arr]
 
-        # Forward LSTM
-        h_f = _run_lstm(x_seq, self.W_f, self.U_f, self.b_f, mask)
+        # Forward LSTM (0 -> T)
+        H_f = _run_lstm_seq(x_seq, self.W_f, self.U_f, self.b_f)
 
-        # Backward LSTM (processes reversed sequence)
-        h_b = _run_lstm(x_seq[::-1], self.W_b, self.U_b, self.b_b, mask[::-1])
+        # Backward LSTM (T -> 0)
+        H_b_rev = _run_lstm_seq(x_seq[::-1], self.W_b, self.U_b, self.b_b)
+        H_b = H_b_rev[::-1]
 
-        # Concatenate forward + backward states
-        h_cat = np.concatenate([h_f, h_b])
+        # Concatenate forward + backward states at each sequence position
+        H = np.concatenate([H_f, H_b], axis=-1)
 
-        # Dense sigmoid output
-        prob = sigmoid(np.dot(h_cat, self.W_d) + self.b_d)[0]
+        # Dual Global Pooling: overall thematic mood + salient emotional spikes
+        avg_pool = np.mean(H, axis=0)
+        max_pool = np.max(H, axis=0)
+        concat = np.concatenate([avg_pool, max_pool])
+
+        # Layer Normalization (epsilon=1e-3)
+        mean = np.mean(concat)
+        var = np.var(concat)
+        norm = (concat - mean) / np.sqrt(var + 1e-3)
+        norm = norm * self.ln_gamma + self.ln_beta
+
+        # Dense projection with ReLU
+        h1 = np.maximum(0.0, np.dot(norm, self.W_dense1) + self.b_dense1)
+
+        # Dense output with Sigmoid
+        prob = sigmoid(np.dot(h1, self.W_out) + self.b_out)[0]
         return float(prob)
 
 
@@ -133,4 +149,3 @@ def load_model(base_dir, vocab_list):
             pass
 
     return None
-
