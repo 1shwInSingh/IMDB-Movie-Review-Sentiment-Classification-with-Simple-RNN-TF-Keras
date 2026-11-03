@@ -106,5 +106,20 @@ class TestIMDBSentimentApp(unittest.TestCase):
         self.assertIn("error", data)
 
 
+    def test_static_stylesheet_served(self):
+        """Verify /static/style.css is served with 200 and text/css."""
+        res = self.client.get("/static/style.css")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/css", res.content_type)
+        self.assertIn("--bg-dark", res.get_data(as_text=True))
+
+    def test_static_javascript_served(self):
+        """Verify /static/app.js is served with 200 and javascript."""
+        res = self.client.get("/static/app.js")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("javascript", res.content_type)
+        self.assertIn("runPrediction", res.get_data(as_text=True))
+
+
 if __name__ == "__main__":
     unittest.main()

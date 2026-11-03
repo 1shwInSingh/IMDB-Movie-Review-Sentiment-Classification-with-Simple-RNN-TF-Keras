@@ -3,14 +3,21 @@ import json
 import os
 import time
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from model_engine import load_model
 
-app = Flask(__name__)
-
 # Robust absolute path resolution
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+app = Flask(
+    __name__,
+    static_folder=STATIC_DIR,
+    static_url_path="/static",
+    template_folder=TEMPLATES_DIR
+)
 VOCAB_PATH = os.path.join(BASE_DIR, "vocab.json")
 METRICS_PATH = os.path.join(BASE_DIR, "metrics.json")
 
@@ -113,6 +120,14 @@ def predict():
         "emoji": emoji,
         "latency_ms": latency_ms,
     })
+
+
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    """Explicitly serve static assets with caching headers for serverless environments."""
+    response = send_from_directory(STATIC_DIR, filename)
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    return response
 
 
 if __name__ == "__main__":
